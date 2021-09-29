@@ -1,0 +1,969 @@
+---
+title: "TRABAJO FIN DE MASTER: Bank marketing campaigns"
+author: "María Mendoza Organero"
+output: 
+  html_document:
+    toc: true
+    df_print: paged
+    fig_height: 5
+    fig_width: 7
+    theme:
+      bootswatch: minty
+  word_document: default
+always_allow_html: true
+---
+
+
+
+```{r setup, include=FALSE}
+#Tanto el código R como la salida aparecerán en el documento final:
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 1. PRESENTACIÓN DEL CASO
+
+Un banco de Portugal está evaluando los resultados de su última campaña de marketing. Se ha contactado a los clientes para ofrecerles depósitos a plazos pero los resultados no son los deseados. El objetivo es mejorar la efectividad de las campañas y mejorar las contrataciones de productos similares de cara a las siguientes. Para ello, se ha preparado un dataset que muestra los datos de los clientes e información relativa a campañas previas, incluyendo el resultado de la última campaña, *y*: toma el valor "yes" cuando el cliente contrató el depósito, y "no" en caso contrario. Este dataset se ha enriquecido con variables de carácter socioeconómico publicadas por el Banco de Portugal, información de carácter público disponible en su página [web](https://www.bportugal.pt/estatisticasweb).
+
+# 2. DESCRIPCIÓN DEL DATASET
+
+El dataset con el que trabajaremos ha sido ofrecido por los autores del siguiente estudio que debemos citar: Moro et al., 2014 S. Moro, P. Cortez and P. Rita. *A Data-Driven Approach to Predict the Success of Bank Telemarketing.* Decision Support Systems, Elsevier, 62:22-31, June 2014]. Puede descargarse haciendo click [aquí](https://archive.ics.uci.edu/ml/datasets/bank+marketing)
+
+El dataset contiene 41188 observaciones y un total de 20 variables (inputs). El dataset original consistía en 150 variables, el cual se redujo después de un proceso de selección semi-automático. De estas variables, 14 hacen referencia a información de los clientes (edad, situación laboral, educación, etc.) y de las campañas de marketing llevadas a cabo (modo y frecuencia de contacto, por ejemplo). Las otras 5, son variables de carácter social y económico, tales como variación de la tasa de empleo, nivel de confianza del consumidor, Euribor, etc. La variable restante es la objetivo *y*: ¿el cliente contrató el producto?
+
+Describimos a continuación cada variable, distinguiendo entre:
+
+### Datos del cliente y de las campañas de marketing
+
+1. age. Edad del cliente.
+2. job. Tipo de empleo del cliente.  
+3. marital. Estado civil del cliente. . 
+4. education. Nivel formativo del cliente.  
+5. default. Indica si el cliente tiene créditos en mora. Toma los valores "yes" y "no".
+6. housing. Indica si el cliente tiene contratado un préstamo hipotecario. Toma los valores "yes" y "no".
+7. loan. Indica si el cliente tiene contratado un préstamo personal. Toma los valores "yes" y "no".
+8. contact. Forma de contacto con el cliente. 
+9. month. Mes del año en que se produjo el último contacto con el cliente. 
+10. day_of_week. Día de la semana en que se produjo el último contacto con el cliente. 
+11. duration. Duración de la llamada medida en segundos.
+12. campaign. Número de contactos al mismo cliente durante la campaña, incluyendo el último.
+13. pdays. Número de días que han transcurrido desde que el cliente fue contactado por última vez para una campaña anterior. "999" significa que no se ha contactado previamente a ese cliente.
+14. previous. Número de contactos al mismo cliente antes de esta campaña.
+15. poutcome. Resultado de la anterior campaña de marketing.
+
+### Datos sobre el contexto socio económico
+
+16. emp.var.rate. Tasa de variación del empleo (indicador cuatrimestral).
+17. cons.price.idx. Índice de precios al consumo (indicador mensual).
+18. cons.conf.idx. Índice de confianza del consumidor (indicador mensual).
+19. euribor3m. Tasa Euribor a 3 meses (indicador diario).
+20. nr.employed. Número de trabajadores activos (indicador cuatrimestral).
+
+21. y. Indica si el cliente ha contratado el depósito a plazo. Toma los valores "yes" y "no". VARIABLE OBJETIVO.
+
+Los datos desconocidos o faltantes se han identificado como "unknown".
+
+# 3. OBJETIVOS
+
+El primer objetivo será entender qué variables afectan más a la probabilidad de contratación del depósito a largo plazo, de modo que las campañas de marketing y el propio producto puedan adaptarse para conseguir la mayor aceptación posible. Vamos a abordar el caso con un enfoque principalmente teórico pero, evidentemente, con una aplicación práctica. A través de los diferentes modelos planteados y de la interpretación de resultados, podremos poner sobre la mesa los factores más determinantes. Los de tipo socio económico, si se demuestra su relevancia, deben observarse, entender su repercusión y servir como punto de partida para plantear la estrategia de marketing.
+
+El segundo objetivo de este estudio es demostrar que abordar un problema desde una perspectiva contextual siempre nos permitirá obtener mejores resultados. Limitar el análisis a las variables internas que maneja una compañía, nos arrojará un resultado sesgado y una visión parcial de la situación. Obviamente, integrar datos contextuales, por ejemplo, de tipo socioe conómico, es una tarea compleja que requiere de un estudio previo en detalle del caso que nos ocupa. Sin duda, lo más acertado es investigar, formarse y aprender de expertos en la materia, para adquirir perspectiva. Después, estaremos preparados para hacer una primera selección de variables basada en nuestro propio conocimiento del caso. El siguiente paso sería incorporar estas variables al conjunto de datos original de manera que podamos comenzar a trabajar con un dataset mucho más rico y completo.
+
+El tercer objetivo es poder extrapolar las principales conclusiones de este análisis. Si la fase de estudio preliminar se ha realizado correctamente, es muy probable que las variables que hemos seleccionado para enriquecer nuestro dataset sean relevantes para nuestro estudio. Dado que estas variables que incorporamos son datos contextuales, el modelo resultante podrá aplicarse a diferentes casuísticas, por ejemplo, dentro del mismo sector o del mismo ámbito territorial o que afecten a productos bancarios similares. Por lo tanto, si demostramos la eficacia de contextualizar nuestro caso de estudio y obtenemos un buen modelo, podremos pasarlo a producción y aplicarlo a diferentes estudios.
+
+# 4. FASES DE DESARROLLO
+
+El estudio se dividirá en las siguientes fases:
+1. Exploratory Data Analysis (EDA). 
+2. Campos faltantes, vacíos y nulos.
+3. Feature enginering.
+4. Modelización.
+
+
+## 1. EXPLORATORY DATA ANALYSIS (EDA)
+
+```{r librerías, echo=FALSE, results='hide', message=FALSE}
+#Importamos las librerías necesarias. Fijamos el directorio de trabajo.
+library(ggplot2)
+library(tidyverse)
+library(corrplot)
+library(ggcorrplot)
+library(knitr)
+library(forecast)
+library(lattice)
+library(heatmaply)
+library(inspectdf)
+library(data.table)
+library(stringi)
+library(gridExtra)
+library(lmSupport)
+library(caret)
+library(questionr)
+library(cleandata)
+source('Funciones_R.R')
+```
+
+```{r directorio, echo=FALSE, results='hide'}
+setwd("C:/Users/javie/Documents/Data Analyst/TEMARIO MASTER/TFM/Datos banco Portugal")
+```
+
+```{r, echo=FALSE, results='hide'}
+#Abrimos y guardamos en "data"
+data<- read.table("bank-additional-full.csv",header=TRUE,sep=";")
+
+#Hacemos una primera inspección del data.frame:
+str(data)
+
+```
+En una primera inspección, vemos que vamos a trabajar con un conjunto de datos que tiene 41.188 observaciones y 21 variables. Aunque por la naturaleza de las variables es improbable, nos asegurarnos que ninguna de las cuantitativas sea cualitativa contando el número de observaciones diferentes (puede que R la haya identificado de manera errónea).
+
+```{r, echo=FALSE, results='hide'}
+sapply(Filter(is.numeric, data), function(x) length(unique(x)))
+```
+La variable *previous* tan solo toma 8 valores diferentes, podríamos considerar discretizarla (convertirla a variable categórica) y comprobar si aporta más valor al modelo. La misma transformación podemos aplicar a otras continuas, para ver si aportan así más valor al modelo.
+ 
+```{r, echo=FALSE, results='hide'}
+#Vamos a obtener más información:
+summary(data)
+```
+En cuanto a las variables numéricas, estudiaremos más adelante en detalle la presencia de valores extremos y veremos cómo tratarlos. De este primer análisis podemos concluir que:
+- Hay mucha dispersión en las observaciones de *duration*.
+- *pdays* parece que presenta un distribución muy irregular, con un claro predominio de 999 (clientes a los que nunca se ha contactado).
+- La edad media de los clientes es de 40 años y la mayoría de ellos se encuentran en un rango de edad entre 32 y 47 años.
+
+### DISTRIBUCIÓN. DETECCIÓN DE VALORES EXTREMOS (OUTLIERS)
+
+Estudiaremos gráficamente la distribución de los datos. Podremos detectar más fácilmente la presencia de datos extremos:
+
+```{r, echo=FALSE}
+#Boxplot
+b1<-ggplot(data)+aes(x="", y= campaign)+geom_boxplot(outlier.colour = "#0c4c8a")+ggtitle("Campaign")
+b2<-ggplot(data)+aes(x="", y= age)+geom_boxplot(outlier.colour = "#0c4c8a")+ggtitle("Age")
+b3<-ggplot(data)+aes(x="", y= pdays)+geom_boxplot(outlier.colour = "#0c4c8a")+ggtitle("Pdays")
+b4<-ggplot(data)+aes(x="", y= previous)+geom_boxplot(outlier.colour = "#0c4c8a")+ggtitle("Previous")
+grid.arrange(b1, b2, b3, b4, ncol=2)
+```
+
+
+```{r, echo=FALSE}
+#Histogramas
+h1<- ggplot(data)+aes(x= campaign)+geom_histogram(bins = 10L, fill= "#0c4c8a")+ggtitle("Campaign")
+h2<- ggplot(data)+aes(x= previous)+geom_histogram(bins = 10L, fill= "#0c4c8a")+ggtitle("previous")
+h3<- ggplot(data)+aes(x= age)+geom_histogram(bins = 10L, fill= "#0c4c8a")+ggtitle("age")
+h4<- ggplot(data)+aes(x= pdays)+geom_histogram(bins = 10L, fill= "#0c4c8a")+ggtitle("pdays")
+grid.arrange(h1, h2, h3, h4, ncol=1)
+```
+
+Los outliers pueden deberse a errores en la recogida, medida o codificación de los datos. Pero también pueden responder a la variabilidad inherente de la variable en cuestión. Parece que en nuestro caso se ajustan a la segunda definición y es lo que se conoce como valores extremos. 
+
+La variable *campaign* vemos que tiene una distribución irregular, la mayoría de las observaciones toman valor 0 mientras que el resto se distribuyen en valores hasta 20 (probablemente se trate de contactos realizados por error al mismo cliente).
+
+La variable *previous* tiene una distribución muy similar a la anterior, la mayoría de observaciones toman valor 0. Un pequeña proporción de clientes ha sido contactada entre más de 2 veces.
+
+La variable *age* tiene una distribución normal, con una pequeña proporción de clientes que supera los 55 años o que está por debajo de los 25. La mayoría está en una franja entre los 30 y los 48 años.
+
+La variable *pdays* toma muy pocos valores diferentes, estando la mayoría en 999 que significaba que no se había contactado nunca a ese cliente. 
+
+
+### VARIABLES CATEGÓRICAS: NIVELES
+
+```{r inspect categóricas, echo=FALSE}
+#Gráfico variables categóricas:
+x<- inspect_cat(data)
+show_plot(x)
+
+```
+
+Las variables no tienen demasiadas clases distintas, de manera que pueden aportar información a nuestro modelo sin necesidad de manipularlas (agrupar en menos categorías, por ejemplo).
+
+```{r, echo=FALSE, results='hide'}
+#Education
+print("education :")
+round(prop.table(table(data$education))*100,2)
+
+#Job
+print("job :")
+round(prop.table(table(data$job))*100,2)
+
+#Marital
+print("marital :")
+round(prop.table(table(data$marital))*100,2)
+
+#poutcome
+print("poutcome :")
+round(prop.table(table(data$poutcome))*100,2)
+```
+
+Observamos en detalle nuestra target:
+
+La variable objetivo, *y*, presenta una mayor proporción de "no" frente a "yes". Es importante tener en cuenta este aspecto ya que esto significa que nos encontramos ante un *problema de clasificación no balanceado* con una clase minoritaria, "yes", y otra mayoritaria, "no". Cuando la diferencia es muy pronunciada, el modelado resulta más complicado ya que la clase minoritaria es más difícil de predecir. Por otro lado, la mayoría de los algoritmos de clasificación de machine learning están diseñados y probados sobre problemas en los que se asume una distribución equilibrada de las clases, por lo que hay que prestar especial atención. Vamos a comprobar la distribución de nuestra variable objetivo:
+
+```{r, echo=FALSE}
+target<-round(prop.table(table(data$y))*100, 2)
+kable(target)
+```
+### VARIABLES NUMÉRICAS: CORRELACIÓN ENTRE ELLAS
+
+```{r inspect correlaciones, echo=FALSE}
+#Gráfico de correlaciones entre las variables numéricas. Nos dará información sobre variables altamente relacionadas, a tener en cuenta a la hora de modelizar:
+x<- inspect_cor(data)
+show_plot(x)
+
+```
+
+Podemos destacar que:
+- Hay una alta correlación positiva entre la tasa de Euribor y las variables que se refieren al empleo y al índice de precios al consumo.
+- Se observa alta correlación positiva entre **nr.employed** y **cons.price.idx**.
+- También hay alta correlación negativa entre las variables **previous** y **pdays**, que hacen referencia al número de contactos a un mismo cliente y al número de días transcurridos desde el último contacto, respectivamente.
+
+Tendremos que tener cuidado al plantear los modelos e incluir las variables *euribor3m*, *emp.var.rate* y *nr.employed* por posibles problemas de multicolinealidad.
+
+### VALORES MÁS FRECUENTES PARA CADA VARIABLE
+
+Este paso nos permite observar a rasgos generales las características de los clientes, de las campañas de marketing y del entorno socioeconómico.
+
+Para las variables categóricas, estos son los resultados:
+```{r inspect distribución cat, echo=FALSE}
+#Distribución de valores en cada variable categórica. Muestra el valor más común de cada una:
+x<- inspect_imb(data)
+show_plot(x)
+
+
+```
+
+Hacemos incapié de nuevo en el enorme desbalanceo de clases en la variable objetivo.
+
+Para las variables numéricas,los siguientes histogramas muestran la distribución:
+
+```{r inspect distribución num, echo=FALSE}
+#Histograma que muestra la distribución de valores para variables numéricas:
+x<- inspect_num(data)
+show_plot(x)
+```
+
+Mencionamos las principales conclusiones que extraemos:
+
+- La mayoría de los clientes:
+
+a. No tienen contratado un préstamo personal.
+b. No tienen créditos en mora.
+c. Están casados.
+d. Tienen contratada una hipoteca.
+e. Tienen formación universitaria.
+f. Trabajan como personal administrativo.
+g. Tienen entre 35 y 45 años.
+h. No han sido contactados durante campañas previas de marketing.
+
+- Respecto a las campañas de marketing:
+
+a. Se contactó a la mayoría de los clientes a su teléfono móvil, en el mes de mayo y un jueves.
+b. A la mayoría de los clientes no se les contactó en la anterior campaña.
+
+- Respecto a la situación socio económica durante el periodo de estudio (recordamos, 2008 a 2013) estos son los aspectos más destacados. Es importante mencionar que coincide con la crisis económica global que sufrimos, de manera que estos datos van a mostrar algunos de sus efectos:
+
+a. El Euribor registró valores muy altos (cercanos a los 5 puntos) durante buena parte del periodo de estudio.
+b. El nivel de confianza de los consumidores se ha mantenido en valores negativos durante todo el periodo.
+c. Hay periodos de destrucción de empleo combinados con algunos periodos de creación de empleo a tasas muy bajas.
+
+### VALORES FALTANTES (NA)
+
+```{r inspect Na, echo=FALSE, results='hide'}
+#Posibles Na en las variables. Tenía hecha la representación gráfica pero comenzó a darme este error al que no he encontrado explicación ni solución: Error in if (type$method == "cat") { : argument is of length zero
+inspect_na(data)
+
+
+
+```
+
+Se observa que no hay valores NA. Esto es correcto para las variables numéricas/continuas pero no para las categóricas, ya que los valores faltantes se han identificado con el valor *unknown*. Es lo que se conoce como **false non-missing values**. 
+
+```{r, echo=FALSE, results='hide'}
+#Tablas con las frecuencias de valores, para identificar la proporción de "unknown"
+
+freqjob<- apply(data['job'], 2, table)
+kable(freqjob, caption = "Frecuencia niveles job")
+
+freqmarital<- apply(data['marital'], 2, table)
+kable(freqmarital, caption = "Frecuencia niveles marital")
+
+freqeduc<- apply(data['education'], 2, table)
+kable(freqeduc, caption = "Frecuencia niveles education")
+
+freqdefault<- apply(data['default'], 2, table)
+kable(freqdefault, caption = "Frecuencia niveles default")
+
+freqhousing<- apply(data['housing'], 2, table)
+kable(freqhousing, caption = "Frecuencia niveles housing")
+
+freqloan<- apply(data['loan'], 2, table)
+kable(freqloan, caption = "Frecuencia niveles loan")
+
+freqpoutc<- apply(data['poutcome'], 2, table)
+kable(freqpoutc, caption = "Frecuencia niveles poutcome")
+
+freqjob<- apply(data['job'], 2, table)
+kable(freqjob, caption = "Frecuencia niveles job")
+
+```
+
+Presentan registros *unknown* las variables:
+
+- job
+- marital
+- education
+- default
+- housing
+- loan
+
+Lo vemos en términos de proporciones:
+
+```{r, echo=FALSE, results='hide'}
+print("Job")
+round(prop.table(table(data$job))*100,2)
+print("Marital")
+round(prop.table(table(data$marital))*100,2)
+print("Education")
+round(prop.table(table(data$education))*100,2)
+print("Default")
+round(prop.table(table(data$default))*100,2)
+print("Housing")
+round(prop.table(table(data$housing))*100,2)
+print("Loan")
+round(prop.table(table(data$loan))*100,2)
+
+```
+
+La variable *default* es la que presenta una mayor proporción de "faltantes"unknown" (casi un 21%). El resto, un 4,2% para *education*, un 2,4% en los casos de *loan* y *housing*, y menos de un 1% para *job* y *marital*.
+
+```{r, echo=FALSE}
+freqdefault<- apply(data['default'], 2, table)
+kable(freqdefault, caption = "Frecuencia niveles default")
+```
+
+Vemos que coinciden el número de observaciones "unknown" en las variables *housing* y *loan*, debemos comprobar si corresponden a los mismos clientes o si por el contrario no hay ningún tipo de relación.
+
+```{r, echo=FALSE, results='hide'}
+data %>% filter(housing== "unknown" & loan== "unknown") 
+```
+
+Tras las comprobaciones observamos que hay 990 observaciones que presentan el valor "unknown" tanto para la variable *housing* como para la variable *loan* de manera que la presencia de datos faltantes en estas dos variables no es aleatoria y puede venir acompañada de sesgo en las respuestas y, por tanto, en los modelos. Más adelante discutiremos sobre cómo tratar estas observaciones.
+
+```{r, echo=FALSE, results='hide'}
+#Comprobamos si también los faltantes de default están relacionados:
+data %>% filter (housing== "unknown" & loan== "unknown" & default=="unknown")
+```
+
+### DISTRIBUCIÓN DE VARIABLES SEGÚN TIPO: NUMÉRICAS, CATEGÓRICAS
+
+La siguiente gráfica nos ppermitirá, por un lado, observar si todas las variables están bien identificadas. Por otro, conocer de una manera muy visual con qué tipo de variables estamos trabajando.
+```{r inspect types, echo=FALSE, results='hide'}
+#Tipos de variables:
+x<- inspect_types(data)
+show_plot(x)
+```
+
+## 2. CAMPOS FALTANTES, VACÍOS Y NULOS
+
+*CAMPOS FALTANTES*
+
+Es importante entender el porqué de la información faltante. ¿Está ligado al hipotético valor de esa variable? ¿Está ligado al valor de otra variable? ¿O es completamente aleatorio? 
+
+En el caso de *housing* o *loan* ya hemos visto que hay una coincidencia: todos los faltantes se dan en las mismas observaciones.
+
+En el caso de *job*, *marital* o *education*, es posible que la falta de información sea completamente aleatoria.
+
+En el caso de *default* es muy posible que la falta de información se deba a que el cliente no ha revelado ese dato en lo que se refiere a su perfil crediticio y la entidad bancaria no ha investigado su situación.
+
+Teniendo esto en cuenta, vamos ahora a ver la proporción de faltantes por cada observación. Si la proporción fuera superior al 50%, directamente las eliminaríamos, pero no es así pues, de 21 variables, como máximo presentarían faltantes 6. Estudiamos si en alguna observación concurren todos y vemos que no se da esta situación. Por lo tanto, no eliminamos ninguna observación de nuestro conjunto de datos.
+
+```{r, echo=FALSE, results='hide'}
+
+data %>% filter(housing== "unknown" & loan== "unknown" & marital== "unknown" & job== "unknown" & education== "unknown" & default=="unknown") 
+```
+
+Haremos una comprobación más: vamos a ver la cantidad de observaciones que tienen algún dato faltante para valorar el alcance de la pérdida de información.
+
+```{r, echo=FALSE, results='hide'}
+data %>% filter(housing== "unknown" | loan== "unknown" | marital== "unknown" | job== "unknown" | education== "unknown" | default=="unknown") 
+```
+
+Casi el 26% de las observaciones tienen algún dato faltante para alguna de las variables explicativas. Si decidiéramos eliminarlas, estaríamos perdiendo un cuarto de las observaciones disponibles.
+
+*¿Cómo abordamos el problema de los datos faltantes?* 
+
+Como avanzábamos, es importante detectar porqué tenemos datos faltantes. De acuerdo a estudios consultados, pueden darse tres casos:
+
+- Faltantes de forma completamente aleatoria (o MCAR, missing completely at random).
+- Faltantes de forma aleatoria (o MAR, missing at random).
+- Faltantes de forma no aleatoria (o MNAR, missing not at random).
+
+Eliminar los registros con datos faltantes y trabajar sólo con los completos puede producir un sesgo en los resultados siempre que no estemos ante faltantes del tipo MCAR.En nuestro caso, tenemos motivos para pensar que los faltantes son de tipo MNAR, especialmente en lo que se refiere a la variable *default*, que es precisamente la que mayor proporción de faltantes presenta. Es habitual que los clientes puedan mostrarse reticentes a facilitar cierta información a las entidades bancarias, lo cual dificulta su calificación, en especial si los clientes tienen algún préstamo en mora. Otro tipo de información también puede ocultarse para evitar obtener una peor calificación: formación, estado civil, situación laboral, etc. 
+
+En definitiva, hay varios motivos que nos llevan a pensar que los faltantes no solo se deban a que no se ha registrado el dato, sino a que se haya ocultado de forma deliberada. Por este motivo, y para ayudarnos a clasificar a los clientes, vamos a considerar los valores "unknown" como una categoría más que aporta información relevante para el caso de estudio.
+
+*CAMPOS VACÍOS Y NULOS*
+
+```{r, echo=FALSE, results='hide'}
+map(data, ~sum(is.null(.)))
+```
+
+```{r, echo=FALSE, results='hide'}
+vacios<- apply(data, MARGIN = 2, function(x) sum(stri_isempty(x)))
+print(vacios)
+```
+
+No hay valores nulos ni campos vacíos.
+
+## 3. FEATURE ENGINERING
+
+En esta fase intentaremos sacar variables adicionales que permitan al algoritmo trabajar mejor y, por ende, mejorar la capacidad de predicción del modelo. También suprimiremos las variables que no consideremos adecuadas. 
+
+Para la creación de variables podemos utilizar varios métodos:
+
+- Partir de las variables iniciales y crear otras relacionadas.
+
+- Tomar variables externas que enriquezcan el conjunto de datos iniciales. En nuestro caso, como introducíamos al comienzo del informe, queremos destacar la importancia de esta fase de nuestro estudio y demostrar la importancia de introducir variables de carácter socio económico. El conjunto de datos con el que estamos trabajando ya incorpora algunas variables, de tal forma que disponemos de información sobre la tasa de Euribor o la variabilidad del empleo. Por contra, no disponemos del conjunto de datos original facilitado por el banco portugués y se han eliminado, entre otras variables, la información relativa a la fecha. Esto ha impedido que podamos incorporar más variables al conjunto de datos.
+
+```{r, echo=FALSE, results='hide'}
+#Comenzaremos haciendo una copia del dataframe antes de arrancar la fase de Feature Enginering. Creamos la copia:
+dataMod<- copy(data)
+```
+
+### VARIABLE OBJETIVO: Y
+
+En los problemas de clasificación como el que queremos resolver, tenemos que trabajar con una variable objetivo que tome varios niveles. Por eso, transformamos *y* a tipo factor y la nombramos *fe_y*, donde y=0 para "no" e y=1 para "yes". En función del algoritmo que utilicemos a la hora de modelar, elegiremos la variable que mejor se adapte: *y* o *fe_y*. 
+
+```{r, echo=FALSE, results='hide'}
+dataMod$fe_y<- ifelse(dataMod$y == "no", "0", "1")
+dataMod$fe_y<- as.factor(dataMod$fe_y)
+```
+
+### VARIABLE DURATION
+
+Hay una variable que es importante descartar de la fase de modelado: *duration*. Por un lado, este atributo se desconoce antes de realizar la llamada al cliente de modo que no se puede considerar como variable predictora. Por otro lado, una vez finalizada la llamada, evidentemente ya se conoce el valor de *y* ("yes" o "no"). Por estos motivos, y para obtener modelos realistas, prescindiremos de esta variable.
+
+```{r, echo=FALSE, results='hide'}
+#Eliminamos "duration":
+dataMod$duration<- NULL
+```
+
+### OUTLIERS
+
+Como vimos en la fase EDA, los outliers de nuestro dataset parece que no se deben a errores en la fase de recogida o tratamiento inicial, sino que se trata más bien de valores extremos que se ajustan a la naturaleza de las variables (por ejemplo, en *age*). Vamos a mantener todas las observaciones tal y como están pero vamos a hacer transformaciones en algunas variables continuas que permitan incorporar al estudio los outliers.
+
+### NUEVAS VARIABLES: DISCRETIZACIÓN
+
+La variable *previous* tan solo toma 8 valores diferentes, podríamos considerar discretizarla (convertirla a variable categórica) y comprobar si aporta más valor al modelo. La misma transformación podemos aplicar a *pdays* y *campaign*, de manera que agrupemos en varias categorías según el número de contactos. Por último, discretizaremos *age* para trabajar con clientes según tramos de edad.
+
+Así, hemos creado las variables:
+
+- fe_previous. Tres niveles que indican que no se ha realizado ningún contacto al cliente antes de la campaña actual ("ninguno"), que se han realizado entre 1-2 contactos ("pocos") o que se han realizado más de 2 contactos ("muchos").
+
+- fe_pdays. Cuatro niveles que representan que el último contacto fue en la última semana ("1_semana"), en los últimos 15 días ("15_dias"), en el último mes ("1_mes") o nunca se ha producido ("nunca").
+
+- fe_campaign. Cuatro niveles que indican que se ha contactado al mismo cliente durante la campaña actual entre 1-2 veces ("pocos"), entre 3-4 veces ("varios"), entre 5-8 veces ("muchos") y más de 8 veces ("demasiados").
+
+- fe_age. Cinco niveles que incluyen a los clientes menores de 30 ("menor_30"), hasta 39 años ("hasta_39"), hasta 49 años ("hasta_49"), hasta 58 años ("hasta_58") y por último, los mayores de 58 ("mayor_58").
+
+Después de las transformaciones, mantendremos todas las variables ya que tanto las transformadas como las originales pueden aportar información útil al modelo.
+
+```{r, echo=FALSE, results='hide'}
+
+#A partir de pdays creamos fe_pdays:
+dataMod$fe_pdays<- cut(dataMod$pdays, c(-1, 7, 15, 27, 999), c("1_semana", "15_dias", "1_mes", "nunca"))
+
+#A partir de previous creamos fe_previous:
+dataMod$fe_previous<- cut(dataMod$previous, c(-1, 1, 3, 7), c("ninguno", "pocos", "muchos"))
+
+#A partir de campaign creamos fe_campaign:
+dataMod$fe_campaign<- cut(dataMod$campaign, c(0, 2, 4, 8, 56), c("pocos", "varios", "muchos", "demasiados"))
+
+#A partir de age creamos fe_age:
+dataMod$fe_age<- cut(dataMod$age, c(16, 29, 39, 49, 58, 98), c("menor_30", "hasta_39", "hasta_49", "hasta_58", "mayor_58"))
+```
+
+
+```{r, echo=FALSE, results='hide'}
+#Guardamos dataMod. En este punto, vamos a almacenar nuestro conjunto de datos para disponer de ellos más adelante: dataMod.
+#saveRDS(data.frame(dataMod), "dataMod")
+#write.csv(data, row.names= FALSE)
+#Cuando queramos importar el archivo, lo leemos con:
+#dataMod<-readRDS("dataMod")
+
+#Creamos dataMod1 a partir de una copia de dataMod:
+dataMod1<- copy(dataMod)
+dataMod1$y<- NULL
+```
+
+### VARIABLES CATEGÓRICAS
+
+En general, los algoritmos de Machine Learning no pueden trabajar directamente con variables categóricas aunque algunos las tratan. Por ejemplo, la librería Caret hace una transformación a dummies, lo cual incrementa el número de variables con las que trabaja el modelo y esto se traduce en más trabajo computacional. Debemos valorar si esta opción es adecuada en función del númeor de variables y de clases.
+
+En función del algoritmo con el que trabajemos, hemos optado por hacer algunas transformaciones previas a la fase de modelado para pasar de valores categóricos a etiquetas numéricas. Es importante tener en cuenta a la hora de elegir la transformación que algunos algoritmos de random forest no permiten más de un determinado número de niveles. Además, algunos algoritmos como los de la librería H2O, no trabajan con las variables tranformadas mediante ordinal encoding (label encoding). Por lo tanto, iremos adaptando el conjunto de datos a nuestros algoritmos. 
+
+Para las variables cuyos niveles tienen un orden natural, realizaremos una transformación de tipo label encoding, más conocida como ordinal encoding. Vamos a hacerlo pasando a factor y asignando niveles, el resultado serán variables de tipo ordered factor.
+- education
+- fe_age
+- fe_pdays
+- fe_previous
+- fe_campaign
+
+Para las variables cuyos niveles no tienen ningún orden implícito (*job, marital, default, housing, loan, day_of_week, month*), aprovecharemos que algunos paquetes como Keras o H2O ya automatizan el proceso de transformación mediante one-hot-encoding. Como no tenemos un número excesivo de variables ni de clases, no consideramos que habrá problemas con la dimensionalidad de los datos.
+
+```{r, echo=FALSE, results='hide'}
+#Creamos otro conjunto de datos donde almacenaremos las variables transformadas eliminando las originales (*age* vamos a mantenerla): dataMod3. Creamos la copia de dataMod
+dataMod3<- copy(dataMod)
+
+#Pasamos a factor las variables y asignamos niveles (las que antes convertimos a categóricas, ya tienen asignados niveles):
+
+dataMod3$fe_education<- factor(dataMod3$education, ordered= TRUE, levels= c("unknown", "illiterate", "basic.4y", "basic.6y", "basic.9y", "high.school", "professional.course", "university.degree"))
+
+#Asignamos un orden al resto de variables de tipo factor:
+dataMod3$fe_age<- factor(dataMod3$fe_age, ordered = TRUE, levels = c("menor_30", "hasta_39", "hasta_49", "hasta_58", "mayor_58"))
+dataMod3$fe_pdays<- factor(dataMod3$fe_pdays, ordered = TRUE, levels= c("1_semana", "15_dias", "1_mes", "nunca"))
+dataMod3$fe_previous<- factor(dataMod3$fe_previous, ordered = TRUE, levels= c("ninguno", "pocos", "muchos"))
+dataMod3$fe_campaign<- factor(dataMod3$fe_campaign, ordered = TRUE, levels= c("pocos", "varios", "muchos", "demasiados"))
+
+#Eliminamos las variables originales:
+dataMod3[, c("pdays", "previous", "campaign", "education")]<- list(NULL)
+
+```
+
+## 4. MODELIZACIÓN
+
+```{r, echo=FALSE, results='hide'}
+#### CONJUNTOS DE DATOS PARA LA FASE DE MODELADO
+#Este es un resumen de los conjuntos de datos disponibles para la fase de modelado:
+
+#- En **dataMod** tenemos todas las variables que hemos descartado / creado en la fase fe, incluidas *y* y *fe_y*.
+
+#- A partir de una copia de dataMod, generamos **dataMod1** que tiene como variable objetivo *fe_y* (descartamos *y*)
+
+#- A partir de una copia de dataMod, generamos **dataMod2** que tiene como variable objetivo *y* (descartamos *fe_y*)
+
+#- A partir de una copia de dataMod, generamos **dataMod3** que tiene como variables explicativas *fe_age*, *fe_pdays*, *fe_previous*, *fe_campaign* tranformadas por ordinal encoding a tipo ordered factor. Trabajaremos con la objetivo *y* o *fe_y* según convenga en cada algoritmo.
+
+```
+
+### MODELO DE REGRESIÓN LOGÍSTICA
+
+Comenzamos con el modelo de regresión logística GLM. La variable objetivo debe ser de tipo factor 0/1 (utilizamos *fe_y*). Reservamos un 80% de los datos para entrenar el modelo, el 20% restante será para probarlo. Para evaluar los modelos GLM, vamos a utilizar como métrica el Pseudo-R^2 de McFadden que nos mostrará la capacidad de predicción.
+
+Hemos comenzado partiendo de un modelo que incluye todas las variables explicativas de las que disponemos. Atendiendo a la significación de las variables, hemos planteado un segundo modelo que trabaje sólo con las que parecían más relevantes. Por último, el tercer modelo se ha formulado utilizando las mismas variables que el anterior e incluyendo la interacción de *day_of_week* y de *month*.
+
+
+```{r, echo=FALSE, results='hide', warning=FALSE}
+
+#Hacemos la partición:
+set.seed(1989)
+validationIndex<- createDataPartition(dataMod1$fe_y, p=0.8, list=FALSE)
+data_train<- dataMod1[validationIndex,]
+data_test<- dataMod1[-validationIndex,]
+
+
+#Planteamos el modelo inicial con todas las variables:
+modeloglm1<- glm(fe_y~.-nr.employed-loan, data = data_train, family = binomial)
+summary(modeloglm1)
+
+```
+
+```{r, echo=FALSE, results='hide'}
+print("Pseudo-R^2 McFadden para datos de train")
+pseudoR2(modeloglm1,data_train,"fe_y")
+print("Pseudo-R^2 McFadden para datos de test")
+pseudoR2(modeloglm1,data_test,"fe_y")
+```
+
+
+```{r, echo= FALSE, results='hide'}
+
+#Del primer modelo planteado observamos que el Pseudo R^2 es bastante bajo para el conjunto de test (0.20).
+
+#Planteamos un segundo modelo solo con las variables más significativas de acuerdo a los resultados anteriores:
+modeloglm2<- glm(fe_y~default+contact+month+emp.var.rate+cons.price.idx+poutcome+cons.conf.idx+fe_campaign+fe_age+day_of_week+campaign, data = data_train, family = binomial)
+summary(modeloglm2)
+
+```
+```{r, echo=FALSE, results='hide'}
+print("Pseudo-R^2 McFadden para datos de train")
+pseudoR2(modeloglm2,data_train,"fe_y")
+print("Pseudo-R^2 McFadden para datos de test")
+pseudoR2(modeloglm2,data_test,"fe_y")
+```
+
+Observamos que, entre las variables categóricas, hay categorías que no son influyentes pero otras sí. Por ejemplo, las probabilidades de contratación del fondo aumentan cuando el cliente es mayor de 58 años y disminuyen cuando es menor de 49. También tiene impacto el mes del año y día de la semana en que se contacta al cliente (negativo con una significación bastante alta los lunes y durante los meses de mayo y noviembre).
+Un aumento del desempleo (variación negativa de la tasa de variación del empleo) tiene efectos positivos en la probabilidad de contratación, lo mismo ocurre con aumentos en la confianza del consumidor y en la variación de precios al consumo.
+
+
+```{r,  echo=FALSE, results='hide'}
+#Planteamos el modelo 3 con las mismas variables que el anterior pero introduciendo algunas interacciones entre variables: month/day_of_week.
+modeloglm3<- glm(fe_y~default+contact+month+emp.var.rate+cons.price.idx+poutcome+cons.conf.idx+fe_campaign+fe_age+day_of_week+campaign+month:day_of_week, data = data_train, family = binomial)
+summary(modeloglm3)
+
+```
+```{r, echo=FALSE, results='hide'}
+print("Pseudo-R^2 McFadden para datos de train")
+pseudoR2(modeloglm3,data_train,"fe_y")
+print("Pseudo-R^2 McFadden para datos de test")
+pseudoR2(modeloglm3,data_test,"fe_y")
+```
+
+La interacción de las variables que hacen referencia al mes y día de la semana en que se contacta al cliente tiene una alta significación y, algunas de ellas, un impacto negativo importante sobre las probabilidades de contratación (por ejemplo, contactar el mes de junio en jueves). 
+
+Aunque podemos quedarnos con estas conclusiones, tenemos que ver que la capacidad de predicción del modelo no es buena (pseudo R^2 en torno a 0.2) y que no se consiguen mejoras significativas en ninguno de los tres casos.
+
+### GLM CROSS VALIDATION-CARET
+
+Probamos ahora con la librería Caret y con un modelo GLM por el método de cross validation con 3 repeticiones, haciendo una estimación con el error. Por defecto, el conjunto de datos se dividirá en 5 partes, sirviendo 4 de ellas para entrenar el modelo y 1 para predecir, esto va cambiando en cada repetición. Internamente, el algoritmo transforma las variables categóricas a numéricas. La variable objetivo debe ser de tipo "yes" / "no" (utilizamos *y*). Reservamos un 80% de los datos para entrenar el modelo, el 20% restante será para probarlo.
+
+```{r,  echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+#Internamente, el algoritmo transforma las variables categóricas a dummies, esto implica que el modelo va a trabajar con muchas más variables que las originales, tantas como niveles tienen las categóricas
+#Creamos dataMod2 dejando como variable objetivo y:
+dataMod2<- copy(dataMod)
+dataMod2$fe_y<- NULL
+
+#Dividimos el conjunto de datos:
+set.seed(1989)
+validationIndex<- createDataPartition(dataMod2$y, p=0.8, list= FALSE)
+#Seleccionamos el 20% para test y el 80% para train:
+my_train<- dataMod2[validationIndex,]
+my_test<- dataMod2[-validationIndex,]
+
+```
+
+```{r,  echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+#Construimos el modelo. Comenzamos con la función de control que insertaremos después en la fase de entrenamiento:
+trainControl<- trainControl(
+  method = "cv",
+  number = 3,
+  classProbs = TRUE,
+  summaryFunction = twoClassSummary
+)
+
+#Planteamos el modelo, indicando la variable objetivo y considerando todas las demás como predictoras:
+set.seed(19)
+fit<- train(
+  y~.,
+  data = my_train,
+  method = "glm",
+  metric = "ROC",
+  trControl = trainControl
+)
+
+```
+```{r, echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+#Mostramos resultados:
+
+print(fit)
+summary(fit)
+```
+
+El algoritmo nos devuelve un aviso que puede deberse a un posible problema de multicolinealidad. Recordemos que en la fase de exploración identificamos tres variables con una alta correlación entre ellas. Probamos repitiendo la ejecución eliminando la variable *nr.employed*.
+
+Este aviso también responde a un NA en la variable loan("unknown"). Eliminamos también del modelo esta variable.
+
+```{r, echo=FALSE, results='hide', message=FALSE}
+#Planteamos el modelo
+set.seed(19)
+fit<- train(
+  y~.-loan-nr.employed,
+  data = my_train,
+  method = "glm",
+  metric = "ROC",
+  trControl = trainControl
+)
+print(fit)
+summary(fit)
+
+```
+
+Atendiendo al valor de ROC, el modelo nos da un alcance predictivo del 79% por lo que se trata de un modelo bastante bueno.
+
+A la hora de interpretar los coeficientes, vamos a ver qué variables son muy predictivas:
+
+- Default("unknown"): con aquellos clientes sobre los que no se dispone de información sobre créditos en mora, se reducen las probabilidades de contratación.
+- contact
+- month
+- emp.var.rate
+- cons.price.idx
+- euribor3m
+
+Aunque su significación es menor, también aportan valor predictivo las variables siguientes. Destacamos que algunas de ellas son las que hemos discretizado para obtener señal: 
+- fe_campaign ("varios"): tiene un efecto positivo que se hayan producido un par de contactos al mismo cliente durante la campaña.
+- fe_age: que la edad del cliente sea superior a 58 años tiene un efecto positivo en la probabilidad de contratación.
+- campaign: a mayores valores de campaign (más contactos al mismo cliente durante la campaña), empeoran las probabilidades de contratación.
+- day_of_week ("monday"): realizar el contacto un lunes tiene un efecto negativo en las probabilidades de contratación.
+- poutcome ("success"): cuando una anterior campaña ha tenido resultado positivo en un cliente, aumentan las probabilidades de contratación en la actual campaña.
+
+Repetimos el proceso de modelado, esta vez trabajando con las variables categóricas *fe_age*, *fe_pdays*, *fe_previous*, *fe_campaign* transformadas por el método de ordinal encoding (label encoding). La variable objetivo es *y*. Se mantiene en un nivel predictivo similar al anterior (79 %). 
+
+En un tercer intento, vamos a repetir el modelado anterior eliminando las variables menos significativas.
+
+```{r, echo=FALSE, results='hide', message=FALSE}
+#Creamos una copia de dataMod3 dejando como variable objetivo y:
+dataMod4<- copy(dataMod3)
+dataMod4$fe_y<- NULL
+
+#Dividimos el conjunto de datos:
+set.seed(1989)
+validationIndex<- createDataPartition(dataMod4$y, p=0.8, list= FALSE)
+#Seleccionamos el 20% para test y el 80% para train:
+my_train2<- dataMod4[validationIndex,]
+my_test2<- dataMod4[-validationIndex,]
+
+#Construimos el modelo. Comenzamos con la función de control que insertaremos después en la fase de entrenamiento:
+trainControl<- trainControl(
+  method = "cv",
+  number = 3,
+  classProbs = TRUE,
+  summaryFunction = twoClassSummary
+)
+
+#Planteamos el modelo, indicando la variable objetivo y considerando todas las demás como predictoras:
+set.seed(19)
+fit<- train(
+  y~.-loan-nr.employed,
+  data = my_train2,
+  method = "glm",
+  metric = "ROC",
+  trControl = trainControl
+)
+
+```
+
+```{r, echo=FALSE, results='hide', message=FALSE}
+#Mostramos resultados:
+
+print(fit)
+summary(fit)
+```
+
+```{r, echo=FALSE, results='hide', message=FALSE}
+#Construimos el modelo. Comenzamos con la función de control que insertaremos después en la fase de entrenamiento:
+trainControl<- trainControl(
+  method = "cv",
+  number = 3,
+  classProbs = TRUE,
+  summaryFunction = twoClassSummary
+)
+
+#Planteamos el modelo, indicando la variable objetivo y considerando todas las demás como predictoras:
+set.seed(19)
+fit<- train(
+  y~default+contact+month+day_of_week+poutcome+emp.var.rate+cons.price.idx+cons.conf.idx+euribor3m+fe_pdays+fe_age+fe_campaign,
+  data = my_train2,
+  method = "glm",
+  metric = "ROC",
+  trControl = trainControl
+)
+```
+
+```{r, echo=FALSE, results='hide', message=FALSE}
+print(fit)
+summary(fit)
+```
+
+El ajuste del modelo se mantiene en el 79% pero siempre será preferible trabajar con un modelo con menos variables para evitar problemas de sobreajuste.
+
+Aquí la dificultad radica en la interpretación de las variables que hemos convertido a "ordered factor", ya que el algoritmo ajusta una serie de funciones polinomiales a cada nivel de la variable. De manera que, la primera (.L) es lineal, la segunda (.Q) es cuadrática, la tercera (.C) es cúbica y así sucesivamente. Por lo tanto, estos nuevos predictores resultado de la transformación se pueden entender como variables completamente nuevas basadas en el orden de las originales, siendo cada una de ellas linealmente independiente/incorrelada respecto de las demás.
+
+Teniendo lo anterior en cuenta, la interpretación que podemos hacer es:
+
+- fe_pdays (días transcurridos desde el último contacto al cliente).Puesto que el predictor fe_pdays.L es significativo y negativo, sugiere que hay una tendencia lineal decreciente en la probabilidad de contratación a medida que aumenta el número de días transcurridos desde el último contacto.
+
+- fe_age (edad del cliente). Puesto que tanto el predictor fe_age.L como fe_age.Q son significativos y positivos, sugiere que hay una tendencia lineal creciente en la probabilidad de contratación a medida que aumenta la edad del cliente; además, la tendencia se acelera a medida que aumenta la edad. Es decir, los clientes de mayor edad son más propensos a contratar depósitos de ahorro a largo plazo.
+
+- fe_campaign (número de contactos al mismo cliente durante la campaña). Puesto que fe_campaign.L es significativo y negativo, sugiere que hay una tendencia lineal decreciente en la probabilidad de contratación a medida que aumenta el número de contactos al mismo cliente durante la campaña de marketing.
+
+Respecto a las demás variables, destacamos las siguientes:
+
+- Variables de carácter socio económico: 
+euribor3m: es significativo y positivo, teniendo además su estimador un valor bastante alto. Esto indica que un aumento del Euribor incrementa de manera significativa la probabilidad de contratación del producto.
+
+emp.var.rate: es siginificativo y negativo. Indica que cuando la tasa de empleo disminuye respecto del periodo anterior, las probabilidades de contratación del producto aumentan. La mayor volatilidad hace a los individuos más cautos y aumenta la tasa de ahorro.
+
+cons.price.idx: es significativo y positivo. Aumentos en el índice de precios al consumo aumentan las probabilidades de contratación.
+
+- Momento en que se realiza la campaña y se contacta al cliente (month / day_of_week): tiene una importancia muy alta, siendo su efecto significativo. En cuanto a los meses, la conclusión es que mayo, junio y noviembre están totalmente desaconsejados para lanzar las campañas ya que las probabilidades de contratación caen de manera significativa, mientras que el mes de agosto se presenta como muy positivo para lanzar las campañas. En cuanto a días de la semana, los lunes no son en absoluto aconsejables para contactar al cliente.
+
+- Clientes con créditos en mora. Cuando se desconoce este aspecto (default = "unknown") las probabilidades de contratación disminuyen.
+
+##### ¿CÓMO SERÍA NUESTRO MODELO SI NO INCLUYÉRAMOS LAS VARIABLES SOCIO ECONÓMICAS?
+
+Partiendo del último modelo que nos daba un nivel bastante bueno de ajuste (79%), vamos a probar cuál sería el resultado si no incluyéramos ninguna de las variables de tipo socio económico y nos limitáramos a trabajar con los datos internos.
+
+```{r, echo=FALSE, results='hide', warning=FALSE}
+#Construimos el modelo. Comenzamos con la función de control que insertaremos después en la fase de entrenamiento:
+trainControl<- trainControl(
+  method = "cv",
+  number = 3,
+  classProbs = TRUE,
+  summaryFunction = twoClassSummary
+)
+
+#Planteamos el modelo, indicando la variable objetivo y considerando todas las demás como predictoras:
+set.seed(19)
+fit<- train(
+  y~default+contact+month+day_of_week+poutcome+fe_pdays+fe_age+fe_campaign,
+  data = my_train2,
+  method = "glm",
+  metric = "ROC",
+  trControl = trainControl
+)
+```
+
+```{r, echo=FALSE, results='hide'}
+print(fit)
+summary(fit)
+```
+
+El resultado es que el ajuste del modelo disminuye en 3 puntos porcentuales, bajando al 76%. Los coeficientes de las variables explicativas sobre la predicción de la objetivo disminuyen de manera notable.
+
+### RANDOM FOREST DE H2O
+
+Hemos probado también el algoritmo de Random Forest del paquete H2O. La variable obejtivo debe ser de tipo "yes" / "no" (utilizamos *y*). Las variables categóricas que hemos dejado sin transformar serán procesadas por el algoritmo mediante el método de one-hot encoding. Es importante tener en cuenta que este algoritmo no trabaja con variables de tipo ordered factor. En este caso, el conjunto de datos se dividirá en tres partes: train (60%), validation (20%), test (20%).
+
+Es importante destacar que este algoritmo nos permite incorporar un parámetro clave cuando estamos ante un problema de clasificación claramente sesgado: **balance_classes = TRUE**.
+
+```{r, echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+#Cargamos la librería
+library(h2o)
+
+#Abrimos el entorno:
+h2o.init(nthreads = 8, max_mem_size = '8g')
+
+options('h2o.use.data.table'=TRUE)
+
+
+#Convertimos nuestro conjunto de datos a un objeto h2o:
+dataMod_hex <- as.h2o(dataMod2)
+
+
+#Dividimos el conjunto de datos en 3 partes: train, validación y test
+splits<- h2o.splitFrame(
+  data = dataMod_hex,
+  ratios = c(0.6, 0.2),
+  destination_frames = c('train_hex', 'valid_hex', 'test_hex'),
+  seed= 1989
+)
+
+train_hex<- splits[[1]]
+valid_hex<- splits[[2]]
+test_hex<- splits[[3]]
+
+#Definimos las variables: objetivo y explicativas
+y<- 'y' #variable objetivo
+x<- setdiff(names(dataMod_hex),y)
+
+#Nos aseguramos que la variable objetivo sea de tipo factor
+train_hex[,y]<- as.factor(train_hex[,y])
+
+
+#Indicamos el número de folds (cross validation)
+nfolds<- 5
+
+#Planteamos el algoritmo Random Forest:
+model<- h2o.randomForest(
+  x=x,
+  y=y,
+  training_frame= train_hex,
+  validation_frame= valid_hex,
+  nfolds= nfolds,
+  keep_cross_validation_predictions= TRUE,
+  seed= 456,
+  stopping_metric= 'AUC', #métrica de ajuste para un problema de clasificación binario: AUC
+  verbose= FALSE,
+  ntrees= 200,
+  max_depth= 20,
+  balance_classes = TRUE
+)
+
+
+```
+```{r, echo=FALSE, results='hide', message=FALSE}
+model
+```
+
+Analizamos el comportamiento del modelo para el conjunto de datos de test:
+
+```{r, echo=FALSE, results='hide'}
+#Verificamos el nivel de ajuste con el conjunto de datos de test:
+perf<- h2o.performance(model, newdata = test_hex)
+perf
+
+```
+
+Arroja un accuracy (ajuste) bastante bueno del 76%. 
+En la matriz de confusión podemos ver el ratio de error en la predicción. Al estar trabajando con un conjunto con sesgo, el ratio de error para la clase minoritaria "yes" es notablemente más alto (515/905), mientras que para la clase mayoritaria "no" es mucho menor (597/7239), como cabría esperar.
+
+Observamos en el siguiente gráfico la importancia de las variables:
+
+```{r, echo=FALSE}
+
+h2o.varimp_plot(model)
+```
+
+En este modelo toma más importancia la variable euribor, seguida de la edad del cliente y de los datos sobre empleo. Es interesante ver que las variables de carácter socio económico toman una gran significacón como variables explicativas. Los datos sobre campañas previas, contactos o las que definen a los propios clientes (ocupación, estado civil, préstamos) pasan a un segundo plano: o bien no se consideran en el modelo, o bien lo hacen con una importancia por debajo del 0.3, a excepción de *age* que está por encima del 0.6.
+
+```{r, echo=FALSE, results='hide'}
+#Cerramos el entorno:
+h2o.shutdown(prompt = FALSE)
+```
+
+# 5. CONCLUSIONES
+
+Tenemos dos modelos que arrojan resultados bastante satisfactorios y que, sobre todo, nos ayudan a entender qué variables debemos observar de cara al diseño de las próximas campañas. Es muy importante tener en cuenta que es difícil hacer predicciones sobre la clase minoritaria que, en este caso, es nuestro objetivo: los clientes que sí contrataron el depósito apenas representan un 11 % del total. Aunque los ratios de error en la predicción de las contrataciones son relativamente altos, tenemos que enfocar este estudio como un paso inicial importante que nos permitirá abordar la siguiente campaña con unos resultados mejores. Cuando los resultados estén más balanceados, los modelos arrojarán mejores predicciones y unos ratios de error más bajos, se volverán a evaluar los resultados y se diseñará la siguiente campaña en consecuencia. Es decir, la eficacia de las campañas mejorará progresivamente.
+
+Del estudio de las variables queda demostrado que:
+- Las variables de carácter socio económico se presentan como muy significativas y mejoran los resultados de los modelos. Monitorizar la evolución de estos factores permitirá adaptar los productos ofrecidos en las campañas. Por ejemplo, hemos visto que en periodos de incertidumbre (una mayor volatilidad del empleo, mayor tasa de desempleo, menor confianza de los consumidores) los individuos son más propensos a contratar depósitos de ahorro. Podemos deducir que en el escenario opuesto las probabilidades de contratar el producto se reducen y será necesario incentivar a los clientes haciendo el producto más atractivo (mejorar las condiciones u ofrecer mejor rentabilidad, por ejemplo). 
+
+- La edad del cliente es relevante. Las probabilidades de contratación del producto aumentan con la edad del cliente. De aquí podemos sacar la siguiente lectura: es necesario atraer a clientes de edades superiores a los 50 años, ya que hemos visto que la media de edad de los clientes es baja y que la mayoría de ellos están en un rango  comprendido entre los 35 y los 45 años. Además de intentar captar nuevos clientes, debería enfocarse la próxima campaña a clientes mayores de 50 años. 
+
+- Es importante controlar el número de contactos que se hacen al mismo cliente. Mientras que mantener el contacto con el cliente resulta positivo (la respuesta es mala si no se ha contactado nunca con él), las probabilidades de éxito en la campaña se reducen si el número de contactos es excesivo (un máximo de 3 podría ser un límite aceptable).
+
+- Elegir la época del año en la que se lanzan las campañas y el día de la semana en que se contacta con el cliente también tiene una alta significación. A evitar los meses de mayo, junio y noviembre, aconsejable agosto.
+
+# 6. PASO A PRODUCCIÓN DEL MODELO
+
+Aunque el presente estudio se ha enfocado más bien a la mejora de las campañas de marketing y a entender qué factores pueden estar afectando a la toma de decisiones de nuestros clientes, podríamos productivizarlo para hacer una clasificación de los clientes, distinguiendo los que contratarían y los que no contratarían nuestro producto.
+
+La librería H2O nos permite productivizar los modelos de manera muy sencilla, de manera que podríamos usar el modelo henerado convirtiéndlo a un Plain Old Java Object (POJO) o a un Model Object Optimized (MOJO). Cualquiera de estos dos objetos son fácilmente integrables en cualquier entorno Java. Cuando se quiera pasar el modelo a producción, solo habrá que compilar y correr el modelo generado que hemos guardado en el fichero **h2o-genmodel.jar**. En nuestro caso, que el modelo no tiene muchos árboles y que el problema es de clasificación binaria, POJO tiene un rendimiento más rápido que MOJO. Descargar el POJO del modelo que hemos planteado en este estudio es tan sencillo como añadir **h2o.download_pojo(modelo)** a nuestro script de R.
+
+# 7. PROPUESTAS DE MEJORA
+
+Se presentan varias:
+
+1. Mejora continua: aplicar, entrenar modelos, extraer conclusiones, aplicar.
+
+Teniendo en cuenta que partíamos de los resultados de una campaña que había obtenido un porcentaje de éxito de apenas el 11%, el objetivo principal debe ser identificar los principales factores de éxito. Los modelos planteados tienen una capacidad predictiva bastante aceptable pero necesitamos volver a entrenarlos con un conjunto de datos que presenten mayor porcentaje de éxito. 
+
+El siguiente objetivo sería reducir al máximo el ratio de error en la predicción de los casos de éxito ("yes"). Aunque el ajuste general del modelo es bueno, debemos tener en cuenta que al trabajar un caso de clasificación con un claro desbalanceo de clases, la dificultad principal radica en predecir con éxito la clase minoritaria que, en nuestro caso, es la contratación del depósito.
+
+No obstante, tenemos que considerar también que si implementamos las recomendaciones sugeridas en este informe a la próxima campaña de marketing, deberíamos conseguir que el desbalanceo entre clases sea menor, es decir, que el resultado de esta campaña tenga una mayor proporción de contrataciones frente a no contrataciones. De tal forma que podremos tomar los datos de la campaña, volver a entrenar nuestros modelos y conseguir una mejora sustancial en la capacidad de predicción y en el error, volver a analizar los resultados arrojados y preparar la próxima campaña de manera más eficiente.
+
+2. Explorar otros modelos.
+
+Se sugiere implementar otras técnicas como, por ejemplo, el diseño de una red neuronal que nos permita clasificar a los clientes. Unir los resultados de varias campañas nos ayudará a entrenar la red neuronal y obtener unos resultados cada vez más precisos.
+
+3. Introducir otras variables de carácter socio económico.
+
+- Volatilidad del PIB
+
+El objetivo de nuestro estudio es predecir la eficacia de las campañas de venta de depósitos a largo plazo. La contratación de depósitos a largo plazo está directamente relacionada con el ahorro de los hogares. Estudios consultados apuntan que, en el ámbito internacional, los efectos de la crisis económica parecen haber generado un aumento de la tasa de ahorro de los hogares (recordemos que nuestro conjunto de datos está tomado coincidiendo con la crisis). Según el FMI, entre 2007 y 2009, al menos dos quintos del aumento de la tasa de ahorro de varias economías avanzadas se habría debido a la mayor incertidumbre. A su vez, la incertidumbre responde a dos variables: el riesgo de desempleo y a la volatilidad del PIB. Los datos sobre empleo ya se han incorporado en nuestro estudio, no así la volatilidad del PIB.
+
+En la web del Banco de Portugal, tenemos disponible esta información (https://bpstat.bportugal.pt/serie/12518314): se trata de una serie temporal basada en el PIB a precios de mercado que recoge la tasa de variación homóloga, ese decir, la tasa de variación del PIB de un periodo comparada con la de ese mismo periodo en años sucesivos. Se propone incorporar también esta información en forma de nueva variable a nuestro conjunto de datos. El problema que se ha encontrado es que no disponemos de la variable "fecha" que nos permita incorporar esta información.
+
+- Incentivos fiscales
+
+La política fiscal tiene también repercusiones en las decisiones de ahorro. Por ejemplo, impuestos aplicados sobre la rentabilidad del ahorro, son un claro desincentivo a la contratación de un producto como el que estamos estudiando. Incorporar a nuestros modelos las variaciones de la política fiscal que afecten a nuestros potenciales clientes, puede arrojar información muy relevante.
+
+# 8. BIBLIOGRAFÍA
+
+- [Applied missing data analysis with SPSS and RStudio. Martijn W Heymans, Iris Eekhout. First Draft 20-1-2019. Amsterdam, 2019](https://bookdown.org/mwheymans/bookmi/) 
+- Sobre [outliers](https://statsandr.com/blog/outliers-detection-in-r/)
+- *¿Qué ha sucedido con el consumo y el ahorro en España durante la Gran Recesión? Un análisis por tipos de hogar* Autores: Julio López-Laborda, Carmen Marín-González, Jorge Onrubia-Fernández. Estadística Española, volumen 60, número 197/2018, pp. 273-311.
+- [Introduction to Generalized Linear Models. Vienna University of Economics and Business.](https://statmath.wu.ac.at/courses/heather_turner/index.html) 
+- [Feature Engineering and Selection: a practical approach for predictive models. Max Kuhn and Kjell Johnson](http://www.feat.engineering)
+- [Hands-on machine learning with R. Bradley Boehmke, Brandom Greenwell.](https://bradleyboehmke.github.io/HOML/)
+- Documentación sobre [H2O](https://docs.h2o.ai)
+- Interpretación de [odds ratios](https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faq-how-do-i-interpret-odds-ratios-in-logistic-regression/)
+
