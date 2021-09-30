@@ -58,9 +58,11 @@ Describimos a continuación cada variable, distinguiendo entre:
 19. euribor3m. Tasa Euribor a 3 meses (indicador diario).
 20. nr.employed. Número de trabajadores activos (indicador cuatrimestral).
 
-21. y. Indica si el cliente ha contratado el depósito a plazo. Toma los valores "yes" y "no". VARIABLE OBJETIVO.
+### Variable objetivo
 
-Los datos desconocidos o faltantes se han identificado como "unknown".
+21. y. Indica si el cliente ha contratado el depósito a plazo. Toma los valores "yes" y "no".
+
+NOTA: *los datos desconocidos o faltantes se han identificado como "unknown".*
 
 # 3. OBJETIVOS
 
@@ -126,6 +128,7 @@ La variable *previous* tan solo toma 8 valores diferentes, podríamos considerar
 summary(data)
 ```
 En cuanto a las variables numéricas, estudiaremos más adelante en detalle la presencia de valores extremos y veremos cómo tratarlos. De este primer análisis podemos concluir que:
+
 - Hay mucha dispersión en las observaciones de *duration*.
 - *pdays* parece que presenta un distribución muy irregular, con un claro predominio de 999 (clientes a los que nunca se ha contactado).
 - La edad media de los clientes es de 40 años y la mayoría de ellos se encuentran en un rango de edad entre 32 y 47 años.
@@ -195,12 +198,13 @@ round(prop.table(table(data$poutcome))*100,2)
 
 Observamos en detalle nuestra target:
 
-La variable objetivo, *y*, presenta una mayor proporción de "no" frente a "yes". Es importante tener en cuenta este aspecto ya que esto significa que nos encontramos ante un *problema de clasificación no balanceado* con una clase minoritaria, "yes", y otra mayoritaria, "no". Cuando la diferencia es muy pronunciada, el modelado resulta más complicado ya que la clase minoritaria es más difícil de predecir. Por otro lado, la mayoría de los algoritmos de clasificación de machine learning están diseñados y probados sobre problemas en los que se asume una distribución equilibrada de las clases, por lo que hay que prestar especial atención. Vamos a comprobar la distribución de nuestra variable objetivo:
+La variable objetivo, *y*, presenta una mayor proporción de "no" frente a "yes". Es importante tener en cuenta este aspecto ya que esto significa que nos encontramos ante un *problema de clasificación no balanceado* con una clase minoritaria, "yes", y otra mayoritaria, "no". Cuando la diferencia es muy pronunciada, el modelado resulta más complicado ya que la clase minoritaria es más difícil de predecir. Por otro lado, la mayoría de los algoritmos de clasificación de machine learning están diseñados y probados sobre problemas en los que se asume una distribución equilibrada de las clases, por lo que hay que prestar especial atención. Vamos a comprobar la distribución de nuestra variable objetivo.
 
 ```{r, echo=FALSE}
 target<-round(prop.table(table(data$y))*100, 2)
 kable(target)
 ```
+
 ### VARIABLES NUMÉRICAS: CORRELACIÓN ENTRE ELLAS
 
 ```{r inspect correlaciones, echo=FALSE}
@@ -211,6 +215,7 @@ show_plot(x)
 ```
 
 Podemos destacar que:
+
 - Hay una alta correlación positiva entre la tasa de Euribor y las variables que se refieren al empleo y al índice de precios al consumo.
 - Se observa alta correlación positiva entre **nr.employed** y **cons.price.idx**.
 - También hay alta correlación negativa entre las variables **previous** y **pdays**, que hacen referencia al número de contactos a un mismo cliente y al número de días transcurridos desde el último contacto, respectivamente.
@@ -258,7 +263,7 @@ h. No han sido contactados durante campañas previas de marketing.
 a. Se contactó a la mayoría de los clientes a su teléfono móvil, en el mes de mayo y un jueves.
 b. A la mayoría de los clientes no se les contactó en la anterior campaña.
 
-- Respecto a la situación socio económica durante el periodo de estudio (recordamos, 2008 a 2013) estos son los aspectos más destacados. Es importante mencionar que coincide con la crisis económica global que sufrimos, de manera que estos datos van a mostrar algunos de sus efectos:
+- En cuanto a la situación socio económica durante el periodo de estudio (recordamos, 2008 a 2013) estos son los aspectos más destacados. Es importante mencionar que coincide con la crisis económica global que sufrimos, de manera que estos datos van a mostrar algunos de sus efectos:
 
 a. El Euribor registró valores muy altos (cercanos a los 5 puntos) durante buena parte del periodo de estudio.
 b. El nivel de confianza de los consumidores se ha mantenido en valores negativos durante todo el periodo.
@@ -428,7 +433,7 @@ Para la creación de variables podemos utilizar varios métodos:
 dataMod<- copy(data)
 ```
 
-### VARIABLE OBJETIVO: Y
+### VARIABLE OBJETIVO
 
 En los problemas de clasificación como el que queremos resolver, tenemos que trabajar con una variable objetivo que tome varios niveles. Por eso, transformamos *y* a tipo factor y la nombramos *fe_y*, donde y=0 para "no" e y=1 para "yes". En función del algoritmo que utilicemos a la hora de modelar, elegiremos la variable que mejor se adapte: *y* o *fe_y*. 
 
@@ -550,6 +555,8 @@ Comenzamos con el modelo de regresión logística GLM. La variable objetivo debe
 
 Hemos comenzado partiendo de un modelo que incluye todas las variables explicativas de las que disponemos. Atendiendo a la significación de las variables, hemos planteado un segundo modelo que trabaje sólo con las que parecían más relevantes. Por último, el tercer modelo se ha formulado utilizando las mismas variables que el anterior e incluyendo la interacción de *day_of_week* y de *month*.
 
+*NOTA. El algoritmo nos devuelve un aviso que puede deberse a un posible problema de multicolinealidad. Recordemos que en la fase de exploración identificamos tres variables con una alta correlación entre ellas. Probamos repitiendo la ejecución eliminando la variable nr.employed. Este aviso también responde a un NA en la variable loan("unknown"). Eliminamos también esta variable.*
+
 
 ```{r, echo=FALSE, results='hide', warning=FALSE}
 
@@ -657,9 +664,7 @@ print(fit)
 summary(fit)
 ```
 
-El algoritmo nos devuelve un aviso que puede deberse a un posible problema de multicolinealidad. Recordemos que en la fase de exploración identificamos tres variables con una alta correlación entre ellas. Probamos repitiendo la ejecución eliminando la variable *nr.employed*.
-
-Este aviso también responde a un NA en la variable loan("unknown"). Eliminamos también del modelo esta variable.
+*NOTA. El algoritmo nos devuelve un aviso que puede deberse a un posible problema de multicolinealidad. Recordemos que en la fase de exploración identificamos tres variables con una alta correlación entre ellas. Probamos repitiendo la ejecución eliminando la variable nr.employed. Este aviso también responde a un NA en la variable loan("unknown"). Eliminamos también del modelo esta variable.*
 
 ```{r, echo=FALSE, results='hide', message=FALSE}
 #Planteamos el modelo
@@ -688,6 +693,7 @@ A la hora de interpretar los coeficientes, vamos a ver qué variables son muy pr
 - euribor3m
 
 Aunque su significación es menor, también aportan valor predictivo las variables siguientes. Destacamos que algunas de ellas son las que hemos discretizado para obtener señal: 
+
 - fe_campaign ("varios"): tiene un efecto positivo que se hayan producido un par de contactos al mismo cliente durante la campaña.
 - fe_age: que la edad del cliente sea superior a 58 años tiene un efecto positivo en la probabilidad de contratación.
 - campaign: a mayores valores de campaign (más contactos al mismo cliente durante la campaña), empeoran las probabilidades de contratación.
@@ -777,6 +783,7 @@ Teniendo lo anterior en cuenta, la interpretación que podemos hacer es:
 Respecto a las demás variables, destacamos las siguientes:
 
 - Variables de carácter socio económico: 
+
 euribor3m: es significativo y positivo, teniendo además su estimador un valor bastante alto. Esto indica que un aumento del Euribor incrementa de manera significativa la probabilidad de contratación del producto.
 
 emp.var.rate: es siginificativo y negativo. Indica que cuando la tasa de empleo disminuye respecto del periodo anterior, las probabilidades de contratación del producto aumentan. La mayor volatilidad hace a los individuos más cautos y aumenta la tasa de ahorro.
@@ -892,8 +899,9 @@ perf
 
 ```
 
-Arroja un accuracy (ajuste) bastante bueno del 76%. 
-En la matriz de confusión podemos ver el ratio de error en la predicción. Al estar trabajando con un conjunto con sesgo, el ratio de error para la clase minoritaria "yes" es notablemente más alto (515/905), mientras que para la clase mayoritaria "no" es mucho menor (597/7239), como cabría esperar.
+Arroja un accuracy (ajuste) bastante bueno del 76%.
+
+En la matriz de confusión podemos ver el ratio de error en la predicción. Al estar trabajando con un conjunto con sesgo, el ratio de error para la clase minoritaria "yes" es notablemente más alto (515/905) que para la clase mayoritaria "no" (597/7239), como cabría esperar.
 
 Observamos en el siguiente gráfico la importancia de las variables:
 
@@ -914,6 +922,7 @@ h2o.shutdown(prompt = FALSE)
 Tenemos dos modelos que arrojan resultados bastante satisfactorios y que, sobre todo, nos ayudan a entender qué variables debemos observar de cara al diseño de las próximas campañas. Es muy importante tener en cuenta que es difícil hacer predicciones sobre la clase minoritaria que, en este caso, es nuestro objetivo: los clientes que sí contrataron el depósito apenas representan un 11 % del total. Aunque los ratios de error en la predicción de las contrataciones son relativamente altos, tenemos que enfocar este estudio como un paso inicial importante que nos permitirá abordar la siguiente campaña con unos resultados mejores. Cuando los resultados estén más balanceados, los modelos arrojarán mejores predicciones y unos ratios de error más bajos, se volverán a evaluar los resultados y se diseñará la siguiente campaña en consecuencia. Es decir, la eficacia de las campañas mejorará progresivamente.
 
 Del estudio de las variables queda demostrado que:
+
 - Las variables de carácter socio económico se presentan como muy significativas y mejoran los resultados de los modelos. Monitorizar la evolución de estos factores permitirá adaptar los productos ofrecidos en las campañas. Por ejemplo, hemos visto que en periodos de incertidumbre (una mayor volatilidad del empleo, mayor tasa de desempleo, menor confianza de los consumidores) los individuos son más propensos a contratar depósitos de ahorro. Podemos deducir que en el escenario opuesto las probabilidades de contratar el producto se reducen y será necesario incentivar a los clientes haciendo el producto más atractivo (mejorar las condiciones u ofrecer mejor rentabilidad, por ejemplo). 
 
 - La edad del cliente es relevante. Las probabilidades de contratación del producto aumentan con la edad del cliente. De aquí podemos sacar la siguiente lectura: es necesario atraer a clientes de edades superiores a los 50 años, ya que hemos visto que la media de edad de los clientes es baja y que la mayoría de ellos están en un rango  comprendido entre los 35 y los 45 años. Además de intentar captar nuevos clientes, debería enfocarse la próxima campaña a clientes mayores de 50 años. 
@@ -967,3 +976,14 @@ La política fiscal tiene también repercusiones en las decisiones de ahorro. Po
 - Documentación sobre [H2O](https://docs.h2o.ai)
 - Interpretación de [odds ratios](https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faq-how-do-i-interpret-odds-ratios-in-logistic-regression/)
 
+# 9. VISIBILIDAD DEL ESTUDIO
+
+He compartido el trabajo que he realizado en GitHub. Se puede acceder a través del siguiente enlace haciendo click [aquí](https://github.com/MariaHMO/Master-Big-Data-Y-Data-Science---Bank-marketing-campaigns).
+
+También se puede acceder al vídeo de la presentación haciendo click [aquí](https://www.youtube.com/watch?v=Lygd546RCIs)
+
+# 10. ANEXOS
+
+## ANEXO I. NOTEBOOK
+
+Se adjunta el notebook con el código desarrollado para posibles comprobaciones.
